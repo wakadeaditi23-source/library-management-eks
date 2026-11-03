@@ -1,0 +1,65 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'k8s/**'
+      - 'README.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  AWS_REGION: ap-southeast-2
+  ECR_REPOSITORY: library-app
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: pytest -v
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          TAG=${GITHUB_SHA::7}
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          docker build -t $REGISTRY/$ECR_REPOSITORY:$TAG .
+          docker push $REGISTRY/$ECR_REPOSITORY:$TAG
+
+      - name: Update Kubernetes manifest
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          sed -i "s|image: .*/library-app:.*|image: $REGISTRY/$ECR_REPOSITORY:$TAG|" k8s/deployment.yaml
+          sed -i "/name: APP_VERSION/{n;s|value: .*|value: \"$TAG\"|}" k8s/deployment.yaml
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add k8s/deployment.yaml
+          git commit -m "Deploy image $TAG [skip ci]"
+          git push
