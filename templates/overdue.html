@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h3 style="margin-top:0">Overdue Books</h3>
+  {% if books %}
+  <table>
+    <thead><tr><th>Title</th><th>Borrower</th><th>Issued</th><th>Due</th></tr></thead>
+    <tbody>
+    {% for b in books %}
+      <tr>
+        <td>{{ b.title }}</td>
+        <td>{{ b.issued_to }}</td>
+        <td>{{ b.issue_date }}</td>
+        <td><span class="badge overdue">{{ b.due_date }}</span></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p>No overdue books.</p>
+  {% endif %}
+</div>
+{% endblock %}

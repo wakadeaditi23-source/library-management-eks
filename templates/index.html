@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h3 style="margin-top:0">Add a Book</h3>
+  <form method="post" action="{{ url_for('add_book') }}" class="inline" style="flex-wrap:wrap">
+    <input name="title" placeholder="Title" required>
+    <input name="author" placeholder="Author" required>
+    <button type="submit">Add Book</button>
+  </form>
+</div>
+
+<div class="card">
+  <form method="get" action="{{ url_for('index') }}" class="inline" style="margin-bottom:12px">
+    <input name="q" value="{{ q }}" placeholder="Search title or author">
+    <button type="submit" class="secondary">Search</button>
+    {% if q %}<a href="{{ url_for('index') }}" style="align-self:center">Clear</a>{% endif %}
+  </form>
+
+  {% if books %}
+  <div style="overflow-x:auto">
+  <table>
+    <thead>
+      <tr><th>Title</th><th>Author</th><th>Status</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for b in books %}
+      <tr>
+        <td>{{ b.title }}</td>
+        <td>{{ b.author }}</td>
+        <td>
+          {% if not b.issued_to %}
+            <span class="badge available">Available</span>
+          {% elif b.due_date < today %}
+            <span class="badge overdue">Overdue · {{ b.issued_to }}</span>
+          {% else %}
+            <span class="badge issued">Issued to {{ b.issued_to }} · due {{ b.due_date }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if not b.issued_to %}
+          <form method="post" action="{{ url_for('issue_book', book_id=b.id) }}" class="inline">
+            <input name="borrower" placeholder="Borrower" required style="width:110px">
+            <button type="submit">Issue</button>
+          </form>
+          {% else %}
+          <form method="post" action="{{ url_for('return_book', book_id=b.id) }}" class="inline">
+            <button type="submit" class="success">Return</button>
+          </form>
+          {% endif %}
+          <form method="post" action="{{ url_for('delete_book', book_id=b.id) }}" class="inline">
+            <button type="submit" class="danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+    <p>No books found.</p>
+  {% endif %}
+</div>
+{% endblock %}

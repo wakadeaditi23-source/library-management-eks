@@ -1,0 +1,9 @@
+.git
+.github
+__pycache__
+*.pyc
+*.db
+.pytest_cache
+venv
+.venv
+k8s
